@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Decisão: Vou ao Jogo do Náutico?</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Alvirrubro Digital -->
+    <!-- Application Structure Plan: A single-page, scrollable narrative dashboard. It starts with an introduction, moves to an interactive data explorer where users can select variables to visualize their impact on the decision. Next, it presents the decision tree as an HTML/CSS diagram and its rules in clear cards. The core interactive element is a "Simulator" where users can input a game scenario and get a live prediction, which also highlights the decision path on the diagram. It concludes with performance metrics. This structure was chosen to transform a passive report into an active learning tool, guiding the user from exploration to application in a logical, engaging flow. -->
+    <!-- Visualization & Content Choices: 1. Report Info: Variable Importance -> Goal: Allow comparison -> Viz: Interactive Bar Chart -> Interaction: Buttons to switch variables -> Justification: More engaging than static plots. Library: Chart.js. 2. Report Info: Decision Tree Structure -> Goal: Visualize model logic -> Viz: HTML/CSS Diagram -> Interaction: Nodes highlight based on simulator input -> Justification: Adheres to NO SVG rule while being interactive. Method: Custom HTML/JS. 3. Report Info: Model Prediction -> Goal: Allow user testing -> Viz: HTML Form (Simulator) -> Interaction: User inputs scenario, gets prediction -> Justification: Makes the model tangible and useful. Method: Custom JS logic. 4. Report Info: Accuracy -> Goal: Inform performance -> Viz: Stat Cards -> Interaction: Static -> Justification: Clear and modern. Method: HTML/Tailwind. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        .decision-node {
+            transition: all 0.3s ease-in-out;
+            border-width: 2px;
+        }
+        .node-highlight {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.5);
+            border-color: #dc2626;
+        }
+        .connector {
+            position: absolute;
+            background-color: #9ca3af;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-6 py-4 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-red-700">Modelo Preditivo</h1>
+            <p class="text-lg text-gray-600 mt-1">Análise de Decisão: Vou ao Jogo do Náutico?</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+
+        <!-- Seção 1: Introdução -->
+        <section id="intro" class="mb-16 text-center">
+            <h2 class="text-2xl font-bold mb-4">O Problema de Negócio</h2>
+            <p class="max-w-3xl mx-auto text-gray-600">
+                Esta aplicação explora um modelo de Machine Learning que prevê a decisão de um torcedor de ir ou não a um jogo do Náutico. Usando a técnica de Árvore de Decisão, transformamos dados em regras claras para entender os fatores que mais influenciam essa escolha. Explore os dados, entenda as regras e teste o modelo você mesmo!
+            </p>
+        </section>
+
+        <!-- Seção 2: Explorador de Dados -->
+        <section id="explorer" class="mb-16 bg-white p-6 md:p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold mb-2 text-center">Explorador de Dados Interativo</h2>
+            <p class="text-center text-gray-600 mb-6">Clique em uma variável para ver como ela impacta a decisão de ir ao jogo.</p>
+            <div id="variable-selector" class="flex flex-wrap justify-center gap-2 mb-6">
+                <!-- Botões serão inseridos aqui pelo JS -->
+            </div>
+            <div class="chart-container">
+                <canvas id="dataChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Seção 3: A Árvore de Decisão e as Regras -->
+        <section id="model" class="mb-16">
+            <h2 class="text-2xl font-bold mb-8 text-center">O Modelo Revelado: A Árvore e Suas Regras</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                
+                <!-- Diagrama da Árvore -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-6 text-center">Diagrama da Árvore de Decisão</h3>
+                    <div class="relative flex flex-col items-center space-y-8 text-sm">
+                        <!-- Nível 0 -->
+                        <div id="node-0" class="decision-node bg-gray-100 p-3 rounded-lg border-gray-300 shadow w-64 text-center">
+                            <p class="font-bold">Adversário é Clássico?</p>
+                            <p class="text-xs text-gray-500">[Amostras: 15]</p>
+                        </div>
+                        
+                        <!-- Conectores Nível 0 -> 1 -->
+                        <div class="flex w-full justify-around absolute top-16 h-8">
+                            <div class="w-px bg-gray-400"></div>
+                            <div class="w-px bg-gray-400"></div>
+                        </div>
+                        <div class="flex w-full justify-around absolute top-16">
+                             <div class="border-t-2 border-gray-400 w-1/4"></div>
+                             <div class="border-t-2 border-gray-400 w-1/4"></div>
+                        </div>
+                        <div class="flex w-full justify-around absolute top-12 text-xs font-medium text-gray-600">
+                            <p class="bg-gray-50 px-2 rounded -ml-12">Sim</p>
+                            <p class="bg-gray-50 px-2 rounded -mr-12">Não</p>
+                        </div>
+
+                        <!-- Nível 1 -->
+                        <div class="flex w-full justify-around pt-4">
+                            <div id="node-1" class="decision-node bg-green-100 p-3 rounded-lg border-green-400 shadow w-48 text-center">
+                                <p class="font-bold text-green-800">Decisão: SIM</p>
+                                <p class="text-xs text-gray-500">[Amostras: 5]</p>
+                            </div>
+                            <div id="node-2" class="decision-node bg-gray-100 p-3 rounded-lg border-gray-300 shadow w-48 text-center">
+                                <p class="font-bold">Companhia é Amigos?</p>
+                                <p class="text-xs text-gray-500">[Amostras: 10]</p>
+                            </div>
+                        </div>
+
+                        <!-- Conectores Nível 1 -> 2 -->
+                         <div class="flex w-full justify-end absolute top-44 h-8">
+                            <div class="w-px bg-gray-400 mr-[22%]"></div>
+                            <div class="w-px bg-gray-400 mr-[5%]"></div>
+                        </div>
+                        <div class="flex w-full justify-end absolute top-44">
+                             <div class="border-t-2 border-gray-400 w-[12%] mr-[16%]"></div>
+                             <div class="border-t-2 border-gray-400 w-[12%] mr-[-1%]"></div>
+                        </div>
+                        <div class="flex w-full justify-end absolute top-40 text-xs font-medium text-gray-600">
+                            <p class="bg-gray-50 px-2 rounded mr-[18%]">Sim</p>
+                            <p class="bg-gray-50 px-2 rounded mr-[0%]">Não</p>
+                        </div>
+
+                        <!-- Nível 2 -->
+                        <div class="flex w-full justify-around pt-4">
+                            <div></div>
+                             <div class="flex w-1/2 justify-around">
+                                <div id="node-3" class="decision-node bg-green-100 p-3 rounded-lg border-green-400 shadow w-40 text-center">
+                                    <p class="font-bold text-green-800">Decisão: SIM</p>
+                                     <p class="text-xs text-gray-500">[Amostras: 5]</p>
+                                </div>
+                                <div id="node-4" class="decision-node bg-red-100 p-3 rounded-lg border-red-400 shadow w-40 text-center">
+                                    <p class="font-bold text-red-800">Decisão: NÃO</p>
+                                    <p class="text-xs text-gray-500">[Amostras: 5]</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Regras -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold mb-4 text-center lg:text-left">Regras em Português Claro</h3>
+                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-red-600">
+                        <h4 class="font-bold text-lg">REGRA 1: A Regra do Clássico</h4>
+                        <p class="text-gray-600 mt-1"><span class="font-semibold">SE</span> o `Adversário` é um **Clássico**, <span class="font-semibold">ENTÃO</span> a decisão é <span class="font-bold text-green-700">SIM</span>.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-red-600">
+                        <h4 class="font-bold text-lg">REGRA 2: A Regra da Solidão</h4>
+                        <p class="text-gray-600 mt-1"><span class="font-semibold">SE</span> o `Adversário` não é um Clássico <span class="font-semibold">E</span> a `Companhia` é **Sozinho**, <span class="font-semibold">ENTÃO</span> a decisão é <span class="font-bold text-red-700">NÃO</span>.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-lg border-l-4 border-red-600">
+                        <h4 class="font-bold text-lg">REGRA 3: A Regra da Caravana</h4>
+                        <p class="text-gray-600 mt-1"><span class="font-semibold">SE</span> o `Adversário` não é um Clássico <span class="font-semibold">E</span> a `Companhia` é **Amigos**, <span class="font-semibold">ENTÃO</span> a decisão é <span class="font-bold text-green-700">SIM</span>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seção 4: Simulador -->
+        <section id="simulator" class="mb-16 bg-white p-6 md:p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold mb-2 text-center">Simulador de Decisão</h2>
+            <p class="text-center text-gray-600 mb-6">Monte um cenário e veja qual seria a decisão do modelo!</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                <!-- Controles do formulário -->
+                <div class="flex flex-col">
+                    <label for="sim-adversario" class="font-medium mb-1">Adversário</label>
+                    <select id="sim-adversario" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <option>Clássico</option>
+                        <option>Série B</option>
+                        <option>Série C</option>
+                    </select>
+                </div>
+                <div class="flex flex-col">
+                    <label for="sim-companhia" class="font-medium mb-1">Companhia</label>
+                    <select id="sim-companhia" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <option>Amigos</option>
+                        <option>Sozinho</option>
+                    </select>
+                </div>
+                <div class="flex flex-col md:col-span-2 lg:col-span-1">
+                     <label for="sim-estadio" class="font-medium mb-1">Estádio</label>
+                    <select id="sim-estadio" class="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <option>Casa</option>
+                        <option>Fora</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-center mt-6">
+                <button id="predict-btn" class="bg-red-700 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-800 transition-colors text-lg">
+                    Prever Decisão
+                </button>
+            </div>
+            <div id="prediction-result" class="mt-6 text-center text-2xl font-bold h-8">
+                <!-- Resultado da previsão aparece aqui -->
+            </div>
+        </section>
+        
+        <!-- Seção 5: Performance -->
+        <section id="performance" class="text-center">
+            <h2 class="text-2xl font-bold mb-6">Performance do Modelo</h2>
+            <div class="flex flex-wrap justify-center gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg w-64">
+                    <h3 class="text-4xl font-bold text-red-700">80%</h3>
+                    <p class="text-gray-600 mt-2">Acurácia na Base de Teste</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg w-64">
+                    <h3 class="text-4xl font-bold text-red-700">100%</h3>
+                    <p class="text-gray-600 mt-2">Interpretabilidade</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg w-64">
+                    <h3 class="text-4xl font-bold text-red-700">3</h3>
+                    <p class="text-gray-600 mt-2">Regras de Decisão Claras</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white mt-16 border-t">
+        <div class="container mx-auto px-6 py-4 text-center text-gray-500">
+            <p>&copy; 2025 - Projeto de Análise de Dados. Criado com base em um relatório de Árvore de Decisão.</p>
+        </div>
+    </footer>
+
+    <script>
+        const dataset = [
+            { Adversario: 'Clássico', Estadio: 'Casa', Clima: 'Bom', Horario: 'Noite', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Série C', Estadio: 'Fora', Clima: 'Chovendo', Horario: 'Tarde', Companhia: 'Sozinho', VouOuNao: 'Não' },
+            { Adversario: 'Clássico', Estadio: 'Casa', Clima: 'Bom', Horario: 'Noite', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Série B', Estadio: 'Fora', Clima: 'Bom', Horario: 'Tarde', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Série C', Estadio: 'Casa', Clima: 'Chovendo', Horario: 'Noite', Companhia: 'Sozinho', VouOuNao: 'Não' },
+            { Adversario: 'Série B', Estadio: 'Casa', Clima: 'Nublado', Horario: 'Tarde', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Clássico', Estadio: 'Fora', Clima: 'Bom', Horario: 'Tarde', Companhia: 'Sozinho', VouOuNao: 'Não' },
+            { Adversario: 'Série C', Estadio: 'Fora', Clima: 'Chovendo', Horario: 'Noite', Companhia: 'Sozinho', VouOuNao: 'Não' },
+            { Adversario: 'Série B', Estadio: 'Casa', Clima: 'Bom', Horario: 'Noite', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Clássico', Estadio: 'Casa', Clima: 'Nublado', Horario: 'Noite', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Série C', Estadio: 'Fora', Clima: 'Bom', Horario: 'Tarde', Companhia: 'Sozinho', VouOuNao: 'Não' },
+            { Adversario: 'Série B', Estadio: 'Casa', Clima: 'Chovendo', Horario: 'Noite', Companhia: 'Sozinho', VouOuNao: 'Não' },
+            { Adversario: 'Clássico', Estadio: 'Fora', Clima: 'Nublado', Horario: 'Tarde', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Série C', Estadio: 'Casa', Clima: 'Bom', Horario: 'Noite', Companhia: 'Amigos', VouOuNao: 'Sim' },
+            { Adversario: 'Série B', Estadio: 'Fora', Clima: 'Bom', Horario: 'Tarde', Companhia: 'Sozinho', VouOuNao: 'Não' }
+        ];
+
+        let myChart;
+        const features = ['Adversario', 'Companhia', 'Estadio', 'Clima', 'Horario'];
+
+        function processDataForChart(feature) {
+            const counts = {};
+            dataset.forEach(row => {
+                const category = row[feature];
+                if (!counts[category]) {
+                    counts[category] = { Sim: 0, 'Não': 0 };
+                }
+                counts[category][row.VouOuNao]++;
+            });
+
+            const labels = Object.keys(counts);
+            const simData = labels.map(label => counts[label].Sim);
+            const naoData = labels.map(label => counts[label]['Não']);
+
+            return { labels, simData, naoData };
+        }
+
+        function updateChart(feature) {
+            const { labels, simData, naoData } = processDataForChart(feature);
+            myChart.data.labels = labels;
+            myChart.data.datasets[0].data = simData;
+            myChart.data.datasets[1].data = naoData;
+            myChart.options.plugins.title.text = `Decisão de Ir ao Jogo por ${feature}`;
+            myChart.update();
+
+            document.querySelectorAll('#variable-selector button').forEach(btn => {
+                if (btn.textContent === feature) {
+                    btn.classList.add('bg-red-700', 'text-white');
+                    btn.classList.remove('bg-gray-200', 'text-gray-700');
+                } else {
+                    btn.classList.remove('bg-red-700', 'text-white');
+                    btn.classList.add('bg-gray-200', 'text-gray-700');
+                }
+            });
+        }
+
+        function initializeChart() {
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Sim',
+                            data: [],
+                            backgroundColor: 'rgba(29, 78, 216, 0.7)',
+                            borderColor: 'rgba(29, 78, 216, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Não',
+                            data: [],
+                            backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                            borderColor: 'rgba(220, 38, 38, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Contagem de Decisões' }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '',
+                            font: { size: 16 }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                }
+            });
+        }
+        
+        function setupVariableSelector() {
+            const selectorContainer = document.getElementById('variable-selector');
+            features.forEach(feature => {
+                const button = document.createElement('button');
+                button.textContent = feature;
+                button.className = 'px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300';
+                button.onclick = () => updateChart(feature);
+                selectorContainer.appendChild(button);
+            });
+        }
+        
+        function clearHighlights() {
+            document.querySelectorAll('.decision-node').forEach(node => {
+                node.classList.remove('node-highlight');
+            });
+        }
+
+        function handlePrediction() {
+            clearHighlights();
+            const adversario = document.getElementById('sim-adversario').value;
+            const companhia = document.getElementById('sim-companhia').value;
+            
+            const resultDiv = document.getElementById('prediction-result');
+            let decision = '';
+            let path = [];
+
+            document.getElementById('node-0').classList.add('node-highlight');
+
+            if (adversario === 'Clássico') {
+                decision = 'Sim';
+                path = ['node-0', 'node-1'];
+            } else {
+                path.push('node-0', 'node-2');
+                if (companhia === 'Amigos') {
+                    decision = 'Sim';
+                    path.push('node-3');
+                } else {
+                    decision = 'Não';
+                    path.push('node-4');
+                }
+            }
+
+            setTimeout(() => {
+                 path.forEach((nodeId, index) => {
+                    setTimeout(() => {
+                        document.getElementById(nodeId).classList.add('node-highlight');
+                    }, index * 300);
+                });
+            }, 100);
+
+            if (decision === 'Sim') {
+                resultDiv.innerHTML = `<span class="text-green-700">Decisão: ${decision}!</span>`;
+            } else {
+                resultDiv.innerHTML = `<span class="text-red-700">Decisão: ${decision}.</span>`;
+            }
+        }
+
+        window.onload = () => {
+            setupVariableSelector();
+            initializeChart();
+            updateChart('Adversario');
+            document.getElementById('predict-btn').addEventListener('click', handlePrediction);
+        };
+    </script>
+</body>
+</html>
